@@ -17,8 +17,14 @@ let serialManager;
 let protocol;
 
 let chargingSockets = [];
-const SOCKET_COUNT = 12;
+const SOCKET_COUNT = 20;
 let dbReady = false;
+
+let pendingSocketUpdate = false;
+let lastUpdateTime = 0;
+const UPDATE_THROTTLE_MS = 33;
+
+const isStressTest = process.argv.includes('--stress');
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -173,6 +179,31 @@ function initIpcHandlers() {
   });
 }
 
+function throttleSocketUpdate() {
+  if (pendingSocketUpdate) return;
+  pendingSocketUpdate = true;
+
+  const now = Date.now();
+  const delay = Math.max(0, UPDATE_THROTTLE_MS - (now - lastUpdateTime));
+
+  setTimeout(() => {
+    pendingSocketUpdate = false;
+    lastUpdateTime = Date.now();
+    if (mainWindow) {
+      const lightSockets = chargingSockets.map(s => ({
+        id: s.id,
+        status: s.status,
+        current: s.current,
+        voltage: s.voltage,
+        power: s.power,
+        energy: s.energy,
+        temperature: s.temperature
+      }));
+      mainWindow.webContents.send('socket-update', lightSockets);
+    }
+  }, delay);
+}
+
 function handleProtocolData(frames) {
   if (!Array.isArray(frames)) return;
 
@@ -214,12 +245,20 @@ function handleProtocolData(frames) {
     }
   });
 
-  if (mainWindow) {
-    mainWindow.webContents.send('socket-update', chargingSockets);
-  }
+  throttleSocketUpdate();
 }
 
 function simulateData() {
+  const interval = isStressTest ? 50 : 1000;
+
+  if (isStressTest) {
+    chargingSockets.forEach(socket => {
+      socket.status = 'charging';
+      socket.startTime = Date.now();
+    });
+    console.log('压力测试模式：' + SOCKET_COUNT + ' 路插座同时充电，数据频率 ' + (1000 / interval) + 'Hz');
+  }
+
   setInterval(() => {
     let hasChange = false;
     chargingSockets.forEach(socket => {
@@ -241,10 +280,10 @@ function simulateData() {
       }
     });
 
-    if (hasChange && mainWindow) {
-      mainWindow.webContents.send('socket-update', chargingSockets);
+    if (hasChange) {
+      throttleSocketUpdate();
     }
-  }, 1000);
+  }, interval);
 }
 
 app.whenReady().then(async () => {

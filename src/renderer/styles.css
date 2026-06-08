@@ -241,19 +241,19 @@ body {
 
 .sockets-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  padding: 16px;
-  max-height: 320px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  padding: 12px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
 .socket-card {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  padding: 12px;
-  transition: all 0.3s ease;
+  border-radius: 8px;
+  padding: 10px;
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
 }
@@ -283,7 +283,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .socket-id {
@@ -317,8 +317,8 @@ body {
 .socket-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 
 .metric {

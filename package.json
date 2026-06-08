@@ -5,7 +5,8 @@
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev"
+    "dev": "electron . --dev",
+    "stress": "electron . --stress"
   },
   "keywords": ["electron", "charging-station", "monitor"],
   "author": "",
