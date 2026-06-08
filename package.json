@@ -1,0 +1,22 @@
+{
+  "name": "charging-station-monitor",
+  "version": "1.0.0",
+  "description": "社区电动车充电棚智能功率监测系统",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "keywords": ["electron", "charging-station", "monitor"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0"
+  },
+  "dependencies": {
+    "sql.js": "^1.10.3"
+  },
+  "optionalDependencies": {
+    "serialport": "^12.0.0"
+  }
+}

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能充电桩功率监测系统</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <div class="header-left">
+        <h1>⚡ 智能充电桩功率监测系统</h1>
+        <span class="sub-title">社区电动车充电棚 · 保安室监控端</span>
+      </div>
+      <div class="header-right">
+        <div class="status-indicator">
+          <span class="status-dot" id="serialStatus"></span>
+          <span id="serialStatusText">未连接</span>
+        </div>
+        <div class="datetime" id="currentTime"></div>
+      </div>
+    </header>
+
+    <div class="main-content">
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-icon charge-icon">🔋</div>
+          <div class="stat-info">
+            <div class="stat-value" id="totalCharging">0</div>
+            <div class="stat-label">充电中</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon energy-icon">⚡</div>
+          <div class="stat-info">
+            <div class="stat-value" id="todayEnergy">0</div>
+            <div class="stat-label">今日充电 (kWh)</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon count-icon">📊</div>
+          <div class="stat-info">
+            <div class="stat-value" id="todayCount">0</div>
+            <div class="stat-label">今日充电次数</div>
+          </div>
+        </div>
+        <div class="stat-card alarm">
+          <div class="stat-icon alarm-icon">⚠️</div>
+          <div class="stat-info">
+            <div class="stat-value" id="todayAlarms">0</div>
+            <div class="stat-label">今日告警</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        <div class="sockets-panel">
+          <div class="panel-header">
+            <h2>充电插座看板</h2>
+            <div class="panel-actions">
+              <select id="portSelect" class="port-select">
+                <option value="">选择串口...</option>
+              </select>
+              <button class="btn btn-primary" id="connectBtn">连接</button>
+              <button class="btn btn-refresh" id="refreshPortsBtn" title="刷新端口">🔄</button>
+            </div>
+          </div>
+          <div class="sockets-grid" id="socketsGrid">
+          </div>
+        </div>
+
+        <div class="chart-panel">
+          <div class="panel-header">
+            <h2>功率曲线</h2>
+            <div class="chart-tabs">
+              <button class="tab-btn active" data-chart="power">功率</button>
+              <button class="tab-btn" data-chart="voltage">电压</button>
+              <button class="tab-btn" data-chart="current">电流</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="powerChart"></canvas>
+            <div class="chart-legend" id="chartLegend"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-panels">
+        <div class="records-panel">
+          <div class="panel-header">
+            <h2>充电记录</h2>
+            <button class="btn btn-small" id="refreshRecordsBtn">刷新</button>
+          </div>
+          <div class="records-table-container">
+            <table class="records-table">
+              <thead>
+                <tr>
+                  <th>插座</th>
+                  <th>开始时间</th>
+                  <th>结束时间</th>
+                  <th>电量(kWh)</th>
+                  <th>时长</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody id="recordsBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="alarms-panel">
+          <div class="panel-header">
+            <h2>异常告警</h2>
+            <span class="alarm-badge" id="alarmBadge">0</span>
+          </div>
+          <div class="alarm-list" id="alarmList">
+            <div class="empty-state">暂无告警记录</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
