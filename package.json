@@ -6,7 +6,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "stress": "electron . --stress"
+    "stress": "electron . --stress",
+    "aging-test": "electron . --aging-test"
   },
   "keywords": ["electron", "charging-station", "monitor"],
   "author": "",

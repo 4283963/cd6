@@ -124,5 +124,41 @@
   </div>
 
   <script src="renderer.js"></script>
+
+  <div class="aging-alarm-overlay" id="agingAlarmOverlay">
+    <div class="aging-alarm-modal" id="agingAlarmModal">
+      <div class="aging-alarm-header">
+        <div class="aging-alarm-icon">⚠️</div>
+        <h2 class="aging-alarm-title">电瓶老化紧急告警</h2>
+      </div>
+      <div class="aging-alarm-body">
+        <div class="aging-alarm-socket" id="agingAlarmSocket">插座 #</div>
+        <div class="aging-alarm-desc" id="agingAlarmMessage">检测到充电末期功率异常波动</div>
+        <div class="aging-alarm-stats">
+          <div class="aging-stat">
+            <span class="aging-stat-label">功率波动率</span>
+            <span class="aging-stat-value" id="agingVolatility">0%</span>
+          </div>
+          <div class="aging-stat">
+            <span class="aging-stat-label">当前功率</span>
+            <span class="aging-stat-value" id="agingPower">0W</span>
+          </div>
+          <div class="aging-stat">
+            <span class="aging-stat-label">电池温度</span>
+            <span class="aging-stat-value" id="agingTemp">0°C</span>
+          </div>
+        </div>
+        <div class="aging-alarm-warning">
+          ⚡ 该电瓶存在严重老化风险，可能导致过热起火！<br>
+          请保安人员立即前往车棚检查处理！
+        </div>
+      </div>
+      <div class="aging-alarm-footer">
+        <button class="aging-alarm-btn" id="agingAlarmAckBtn">
+          我知道了，立即前往检查
+        </button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

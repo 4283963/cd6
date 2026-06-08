@@ -25,6 +25,17 @@ let lastUpdateTime = 0;
 const UPDATE_THROTTLE_MS = 33;
 
 const isStressTest = process.argv.includes('--stress');
+const isAgingTest = process.argv.includes('--aging-test');
+
+let powerHistoryBuffers = {};
+let agingDetectedMap = {};
+let agingCooldownMap = {};
+const POWER_BUFFER_SIZE = 60;
+const AGING_CHECK_INTERVAL_MS = 5000;
+const AGING_CHARGE_THRESHOLD_MS = 30 * 60 * 1000;
+const AGING_VOLATILITY_THRESHOLD = 0.40;
+const AGING_PERSISTENT_COUNT = 3;
+const AGING_SPIKE_THRESHOLD = 0.25;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -54,8 +65,9 @@ function createWindow() {
 
 function initSockets() {
   for (let i = 0; i < SOCKET_COUNT; i++) {
+    const id = i + 1;
     chargingSockets.push({
-      id: i + 1,
+      id,
       status: 'idle',
       current: 0,
       voltage: 220,
@@ -64,6 +76,9 @@ function initSockets() {
       startTime: null,
       temperature: 25
     });
+    powerHistoryBuffers[id] = [];
+    agingDetectedMap[id] = false;
+    agingCooldownMap[id] = 0;
   }
 }
 
@@ -177,6 +192,125 @@ function initIpcHandlers() {
       return { totalEnergy: 0, totalCount: 0, alarms: 0 };
     }
   });
+
+  ipcMain.handle('acknowledge-aging-alarm', async (event, socketId) => {
+    agingDetectedMap[socketId] = false;
+    agingCooldownMap[socketId] = Date.now() + 30 * 60 * 1000;
+    agingCheckCounters[socketId] = 0;
+    return { success: true };
+  });
+}
+
+function recordPowerSample(socketId, power) {
+  const buffer = powerHistoryBuffers[socketId];
+  if (!buffer) return;
+  buffer.push({ time: Date.now(), power });
+  if (buffer.length > POWER_BUFFER_SIZE) {
+    buffer.shift();
+  }
+}
+
+function calculateVolatility(buffer) {
+  if (buffer.length < 10) return { volatility: 0, spikeCount: 0 };
+
+  let sum = 0;
+  buffer.forEach(s => sum += s.power);
+  const mean = sum / buffer.length;
+
+  if (mean < 50) return { volatility: 0, spikeCount: 0 };
+
+  let variance = 0;
+  let spikeCount = 0;
+  let prevPower = buffer[0].power;
+
+  buffer.forEach((s, i) => {
+    variance += Math.pow(s.power - mean, 2);
+    if (i > 0) {
+      const change = Math.abs(s.power - prevPower) / mean;
+      if (change > AGING_SPIKE_THRESHOLD) {
+        spikeCount++;
+      }
+    }
+    prevPower = s.power;
+  });
+  variance /= buffer.length;
+
+  const stdDev = Math.sqrt(variance);
+  return {
+    volatility: stdDev / mean,
+    spikeCount,
+    spikeRate: spikeCount / buffer.length
+  };
+}
+
+let agingCheckCounters = {};
+
+function checkAgingBattery(socket) {
+  const id = socket.id;
+
+  if (agingDetectedMap[id]) return;
+
+  const now = Date.now();
+  if (agingCooldownMap[id] && now < agingCooldownMap[id]) return;
+
+  if (!socket.startTime || (now - socket.startTime) < AGING_CHARGE_THRESHOLD_MS) return;
+
+  const buffer = powerHistoryBuffers[id];
+  if (!buffer || buffer.length < 30) return;
+
+  const metrics = calculateVolatility(buffer);
+
+  if (metrics.volatility > AGING_VOLATILITY_THRESHOLD && metrics.spikeRate > 0.1) {
+    agingCheckCounters[id] = (agingCheckCounters[id] || 0) + 1;
+
+    if (agingCheckCounters[id] >= AGING_PERSISTENT_COUNT) {
+      triggerAgingAlarm(socket, metrics.volatility);
+      agingDetectedMap[id] = true;
+      agingCheckCounters[id] = 0;
+    }
+  } else {
+    agingCheckCounters[id] = Math.max(0, (agingCheckCounters[id] || 0) - 1);
+  }
+}
+
+function triggerAgingAlarm(socket, volatility) {
+  const message = '电瓶老化风险：充电末期功率波动剧烈（波动率 ' + (volatility * 100).toFixed(1) + '%），可能存在过热危险，请立即前往检查！';
+
+  if (dbReady) {
+    db.addAlarmLog(socket.id, 'battery_aging', message);
+  }
+
+  if (mainWindow) {
+    mainWindow.webContents.send('aging-alarm', {
+      socketId: socket.id,
+      message,
+      volatility: volatility,
+      power: socket.power,
+      temperature: socket.temperature,
+      timestamp: Date.now()
+    });
+  }
+
+  console.warn('⚠️  电瓶老化告警 - 插座 #' + socket.id + ' 波动率: ' + (volatility * 100).toFixed(1) + '%');
+}
+
+function startAgingDetection() {
+  chargingSockets.forEach(s => {
+    agingCheckCounters[s.id] = 0;
+  });
+
+  setInterval(() => {
+    chargingSockets.forEach(socket => {
+      if (socket.status === 'charging') {
+        recordPowerSample(socket.id, socket.power);
+        checkAgingBattery(socket);
+      } else if (socket.status === 'idle') {
+        powerHistoryBuffers[socket.id] = [];
+        agingDetectedMap[socket.id] = false;
+        agingCheckCounters[socket.id] = 0;
+      }
+    });
+  }, AGING_CHECK_INTERVAL_MS / POWER_BUFFER_SIZE * 2);
 }
 
 function throttleSocketUpdate() {
@@ -251,23 +385,48 @@ function handleProtocolData(frames) {
 function simulateData() {
   const interval = isStressTest ? 50 : 1000;
 
-  if (isStressTest) {
+  if (isStressTest || isAgingTest) {
     chargingSockets.forEach(socket => {
       socket.status = 'charging';
-      socket.startTime = Date.now();
+      socket.startTime = Date.now() - 60 * 60 * 1000;
     });
-    console.log('压力测试模式：' + SOCKET_COUNT + ' 路插座同时充电，数据频率 ' + (1000 / interval) + 'Hz');
+    console.log('模拟模式：' + SOCKET_COUNT + ' 路插座同时充电，数据频率 ' + (1000 / interval) + 'Hz');
+    if (isAgingTest) {
+      console.log('🧪 老化测试模式：插座 #3、#7、#12 将模拟老化电瓶功率剧烈波动');
+    }
+  }
+
+  const agingSockets = isAgingTest ? [3, 7, 12] : [];
+  let normalBasePower = {};
+  for (let i = 1; i <= SOCKET_COUNT; i++) {
+    normalBasePower[i] = 500 + Math.random() * 1500;
   }
 
   setInterval(() => {
     let hasChange = false;
     chargingSockets.forEach(socket => {
       if (socket.status === 'charging') {
-        socket.voltage = 215 + Math.random() * 10;
-        socket.current = 1 + Math.random() * 5;
-        socket.power = socket.voltage * socket.current;
-        socket.temperature = 25 + Math.random() * 10;
+        const isAging = agingSockets.includes(socket.id);
+
+        if (isAging) {
+          const basePower = 800 + Math.random() * 400;
+          const spike = Math.random() < 0.35 ? (Math.random() - 0.5) * 1500 : 0;
+          socket.power = Math.max(100, basePower + spike);
+          socket.current = socket.power / 220;
+          socket.voltage = 218 + Math.random() * 4;
+          socket.temperature = 38 + Math.random() * 18 + (Math.abs(spike) > 500 ? 5 : 0);
+        } else {
+          normalBasePower[socket.id] += (Math.random() - 0.5) * 5;
+          normalBasePower[socket.id] = Math.max(300, Math.min(2000, normalBasePower[socket.id]));
+          const noise = (Math.random() - 0.5) * normalBasePower[socket.id] * 0.08;
+          socket.power = normalBasePower[socket.id] + noise;
+          socket.current = socket.power / 220;
+          socket.voltage = 218 + Math.random() * 6;
+          socket.temperature = 28 + Math.random() * 6;
+        }
+
         socket.energy += socket.power / 1000 / 3600;
+
         if (Math.random() < 0.001 && socket.temperature > 50) {
           socket.status = 'alarm';
           if (dbReady) {
@@ -328,6 +487,7 @@ app.whenReady().then(async () => {
   initIpcHandlers();
   createWindow();
   simulateData();
+  startAgingDetection();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

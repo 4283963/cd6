@@ -566,3 +566,208 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
 }
+
+.aging-alarm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease;
+}
+
+.aging-alarm-overlay.show {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.aging-alarm-modal {
+  background: linear-gradient(180deg, #c41e3a 0%, #8b0000 100%);
+  border: 3px solid #ff4444;
+  border-radius: 16px;
+  width: 560px;
+  max-width: 90vw;
+  box-shadow: 
+    0 0 60px rgba(255, 0, 0, 0.6),
+    0 0 120px rgba(255, 0, 0, 0.3),
+    0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: alarmPulse 1s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.aging-alarm-modal::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 70%
+  );
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+@keyframes alarmPulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 60px rgba(255, 0, 0, 0.6),
+      0 0 120px rgba(255, 0, 0, 0.3),
+      0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow: 
+      0 0 80px rgba(255, 0, 0, 0.8),
+      0 0 160px rgba(255, 0, 0, 0.5),
+      0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+}
+
+.aging-alarm-header {
+  padding: 28px 32px 20px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.aging-alarm-icon {
+  font-size: 56px;
+  margin-bottom: 12px;
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px) rotate(-5deg); }
+  75% { transform: translateX(5px) rotate(5deg); }
+}
+
+.aging-alarm-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  letter-spacing: 2px;
+}
+
+.aging-alarm-body {
+  padding: 0 32px 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.aging-alarm-socket {
+  font-size: 42px;
+  font-weight: bold;
+  color: #fff;
+  text-align: center;
+  margin-bottom: 12px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.aging-alarm-desc {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.aging-alarm-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.aging-stat {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 14px 10px;
+  text-align: center;
+}
+
+.aging-stat-label {
+  display: block;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 6px;
+}
+
+.aging-stat-value {
+  display: block;
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffeb3b;
+  font-family: 'Courier New', monospace;
+}
+
+.aging-alarm-warning {
+  background: rgba(0, 0, 0, 0.4);
+  border-left: 4px solid #ffeb3b;
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #fff;
+  line-height: 1.8;
+  font-weight: 500;
+}
+
+.aging-alarm-footer {
+  padding: 0 32px 28px;
+  position: relative;
+  z-index: 1;
+}
+
+.aging-alarm-btn {
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #8b0000;
+  background: linear-gradient(180deg, #fff 0%, #ffdddd 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  letter-spacing: 1px;
+}
+
+.aging-alarm-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.aging-alarm-btn:active {
+  transform: translateY(0);
+}
+
+.socket-card.aging-warning {
+  border-color: #ff4444;
+  background: linear-gradient(135deg, rgba(255, 68, 68, 0.2), rgba(255, 68, 68, 0.05));
+  animation: alarmPulse 2s ease-in-out infinite;
+}
+
+@keyframes alarmPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(255, 68, 68, 0.3); }
+  50% { box-shadow: 0 0 15px rgba(255, 68, 68, 0.5); }
+}

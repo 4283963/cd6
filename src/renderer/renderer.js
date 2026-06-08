@@ -28,10 +28,14 @@ let chartPadding = { top: 20, right: 20, bottom: 30, left: 50 };
 let lastMaxValue = 0;
 let lastMinValue = 0;
 
+let agingAlarmQueue = [];
+let agingAlarmVisible = false;
+
 function init() {
   loadSockets();
   setupEventListeners();
   setupSocketUpdateListener();
+  setupAgingAlarmListener();
   updateDateTime();
   setInterval(updateDateTime, 1000);
   loadDailyStats();
@@ -57,6 +61,8 @@ function setupEventListeners() {
   });
 
   refreshPorts();
+
+  document.getElementById('agingAlarmAckBtn').addEventListener('click', handleAgingAlarmAck);
 }
 
 function setupSocketUpdateListener() {
@@ -74,6 +80,82 @@ function setupSocketUpdateListener() {
     updateSocketElements(updatedSockets);
     scheduleRender();
   });
+}
+
+function setupAgingAlarmListener() {
+  window.electronAPI.onAgingAlarm((alarm) => {
+    console.warn('收到电瓶老化告警:', alarm);
+    agingAlarmQueue.push(alarm);
+    updateSocketAgingWarning(alarm.socketId, true);
+    if (!agingAlarmVisible) {
+      showNextAgingAlarm();
+    }
+    loadDailyStats();
+    loadAlarms();
+  });
+}
+
+function showNextAgingAlarm() {
+  if (agingAlarmQueue.length === 0) {
+    hideAgingAlarm();
+    return;
+  }
+
+  const alarm = agingAlarmQueue.shift();
+  showAgingAlarmModal(alarm);
+}
+
+function showAgingAlarmModal(alarm) {
+  agingAlarmVisible = true;
+
+  document.getElementById('agingAlarmSocket').textContent = '插座 #' + alarm.socketId;
+  document.getElementById('agingAlarmMessage').textContent = alarm.message;
+  document.getElementById('agingVolatility').textContent = (alarm.volatility * 100).toFixed(1) + '%';
+  document.getElementById('agingPower').textContent = alarm.power.toFixed(0) + 'W';
+  document.getElementById('agingTemp').textContent = alarm.temperature.toFixed(1) + '°C';
+
+  document.getElementById('agingAlarmOverlay').classList.add('show');
+
+  try {
+    if (navigator.vibrate) {
+      navigator.vibrate(200);
+    }
+  } catch (e) {}
+}
+
+function hideAgingAlarm() {
+  agingAlarmVisible = false;
+  document.getElementById('agingAlarmOverlay').classList.remove('show');
+}
+
+async function handleAgingAlarmAck() {
+  const socketText = document.getElementById('agingAlarmSocket').textContent;
+  const socketId = parseInt(socketText.replace(/\D/g, ''));
+
+  try {
+    await window.electronAPI.acknowledgeAgingAlarm(socketId);
+  } catch (e) {
+    console.error('确认告警失败:', e);
+  }
+
+  updateSocketAgingWarning(socketId, false);
+
+  if (agingAlarmQueue.length > 0) {
+    showNextAgingAlarm();
+  } else {
+    hideAgingAlarm();
+  }
+}
+
+function updateSocketAgingWarning(socketId, show) {
+  const el = socketElements[socketId];
+  if (!el || !el.card) return;
+
+  if (show) {
+    el.card.classList.add('aging-warning');
+  } else {
+    el.card.classList.remove('aging-warning');
+  }
 }
 
 function scheduleRender() {
